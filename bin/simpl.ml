@@ -1,4 +1,4 @@
-open Libcalc.Calc
+open SimPL.Main
 
 let () =
   let str = read_line () in

@@ -1,7 +1,6 @@
-type bop = 
+type bop =
   | Add
   | Mul
-
 
 type expr =
   | Int of int

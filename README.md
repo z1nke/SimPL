@@ -1,6 +1,6 @@
-# ocamlcalc
+# SimPL
 
-A simple calculator in OCaml.
+A simple program language in OCaml.
 
 WIP...
 

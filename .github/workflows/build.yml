@@ -35,7 +35,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          opam pin add ocamlcalc . --no-action
+          opam pin add SimPL . --no-action
           opam install . --deps-only --yes
 
       - name: Build
