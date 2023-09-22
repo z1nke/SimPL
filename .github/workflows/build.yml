@@ -34,7 +34,7 @@ jobs:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
       - name: Install dependencies
-      - run: |
+        run: |
           opam pin add ocamlcalc . --no-action
           opam install . --deps-only --yes
 
