@@ -1,5 +1,5 @@
 (library
- (name simPL))
+ (name interp))
 
 (ocamllex lexer)
 (menhir (modules parser))

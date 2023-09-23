@@ -1,4 +1,4 @@
-open SimPL.Main
+open Interp.Main
 
 let () =
   let str = read_line () in
