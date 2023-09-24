@@ -10,12 +10,14 @@ let parse (s : string) : expr =
     Requires: [e] is a value. *)
 let string_of_val (e : expr) : string =
   match e with
+  | Bool b -> string_of_bool b
   | Int i -> string_of_int i
   | BinOp _ -> failwith "BinOp is not a value"
   | UnaryOp _ -> failwith "UnaryOp is not a value"
 
 (** [is_value e] is whether [e] is a value. *)
 let is_value : expr -> bool = function
+  | Bool _ -> true
   | Int _ -> true
   | BinOp _ -> false
   | UnaryOp _ -> false
@@ -29,6 +31,8 @@ let step_bop bop v1 v2 =
   | Mul, Int a, Int b -> Int (a * b)
   | Div, Int a, Int b -> Int (a / b)
   | Mod, Int a, Int b -> Int (a mod b)
+  | Eq, Int a, Int b -> Bool (a = b)
+  | Lt, Int a, Int b -> Bool (a < b)
   | _ -> failwith "Invalid binary operator step"
 
 (** [step_uop uop v] implements the primitive operation [uop v].
@@ -42,6 +46,7 @@ let step_uop uop v =
 (** [step e] takes a single step of evaluation of [e]. *)
 let rec step : expr -> expr = function
   | Int _ -> failwith "Does not step"
+  | Bool _ -> failwith "Does not step"
   | BinOp (bop, e1, e2) when is_value e1 && is_value e2 -> step_bop bop e1 e2
   | BinOp (bop, e1, e2) when is_value e1 -> BinOp (bop, e1, step e2)
   | BinOp (bop, e1, e2) -> BinOp (bop, step e1, e2)

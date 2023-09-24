@@ -17,5 +17,9 @@ rule read =
   | "-" { MINUS }
   | "(" { LPAREN }
   | ")" { RPAREN }
+  | "==" { EQ }
+  | "<" { LT }
+  | "true" { TRUE }
+  | "false" { FALSE }
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | eof { EOF }
