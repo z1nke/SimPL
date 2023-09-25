@@ -39,6 +39,11 @@ let tests = [
   make_b "eq2" false "1==2";
   make_b "eq3" true "-1==-1";
   make_b "eq4" false "-1==-2";
+
+  make_i "if" 0 "if true then 0 else 1";
+  make_i "if1" 1 "if false then 0 else 1";
+  make_i "if2" 42 "if 42==42 then 42 else 0";
+  make_b "if3" true "if true then true else false";
 ]
 
 let _ = run_test_tt_main ("suite" >::: tests)

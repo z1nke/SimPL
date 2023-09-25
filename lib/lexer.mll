@@ -21,5 +21,8 @@ rule read =
   | "<" { LT }
   | "true" { TRUE }
   | "false" { FALSE }
+  | "if" { IF }
+  | "then" { THEN }
+  | "else" { ELSE }
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | eof { EOF }

@@ -14,13 +14,12 @@ let string_of_val (e : expr) : string =
   | Int i -> string_of_int i
   | BinOp _ -> failwith "BinOp is not a value"
   | UnaryOp _ -> failwith "UnaryOp is not a value"
+  | If _ -> failwith "If expression is not a value"
 
 (** [is_value e] is whether [e] is a value. *)
 let is_value : expr -> bool = function
-  | Bool _ -> true
-  | Int _ -> true
-  | BinOp _ -> false
-  | UnaryOp _ -> false
+  | Bool _ | Int _ -> true
+  | BinOp _ | UnaryOp _ | If _ -> false
 
 (** [step_bop bop v1 v2] implements the primitive operation [v1 bop v2].
     Requires: [v1] and [v2] are both values. *)
@@ -52,6 +51,10 @@ let rec step : expr -> expr = function
   | BinOp (bop, e1, e2) -> BinOp (bop, step e1, e2)
   | UnaryOp (uop, e) when is_value e -> step_uop uop e
   | UnaryOp (uop, e) -> UnaryOp(uop, step e)
+  | If (Bool true, e1, _) -> e1
+  | If (Bool false, _, e2) -> e2
+  | If (Int _, _, _) -> failwith "Guard of if must have type bool"
+  | If (c, e1, e2) -> If (step c, e1, e2)
 
 (** [eval e] fully evaluates [e] to a value [v]. *)
 let rec eval (e : expr) : expr =

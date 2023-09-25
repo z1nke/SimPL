@@ -12,7 +12,8 @@ type uop =
   | Neg
 
 type expr =
+  | Bool of bool
   | Int of int
   | BinOp of bop * expr * expr
   | UnaryOp of uop * expr
-  | Bool of bool
+  | If of expr * expr * expr

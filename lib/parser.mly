@@ -10,6 +10,9 @@
 %token MOD
 %token LPAREN
 %token RPAREN
+%token IF
+%token THEN
+%token ELSE
 %token EOF
 
 %left EQ
@@ -39,4 +42,5 @@ expr:
   | PLUS; e = expr { UnaryOp (Pos, e) }
   | MINUS; e = expr { UnaryOp (Neg, e) }
   | LPAREN; e = expr; RPAREN { e }
+  | IF cond = expr; THEN; e1 = expr; ELSE; e2 = expr { If(cond, e1, e2) }
   ;
