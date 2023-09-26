@@ -5,6 +5,8 @@ open Parser
 let whitespace = [' ' '\t']+
 let digit = ['0'-'9']
 let int = digit+
+let letter = ['a'-'z' 'A'-'Z']
+let id = letter+
 
 
 rule read =
@@ -24,5 +26,9 @@ rule read =
   | "if" { IF }
   | "then" { THEN }
   | "else" { ELSE }
+  | "let" { LET }
+  | "=" { EQUALS }
+  | "in" { IN }
+  | id { ID (Lexing.lexeme lexbuf)}
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | eof { EOF }

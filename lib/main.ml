@@ -14,12 +14,14 @@ let string_of_val (e : expr) : string =
   | Int i -> string_of_int i
   | BinOp _ -> failwith "BinOp is not a value"
   | UnaryOp _ -> failwith "UnaryOp is not a value"
+  | Let _ -> failwith "Let expression is not a value"
   | If _ -> failwith "If expression is not a value"
+  | Var _ -> failwith "Unbound variable"
 
 (** [is_value e] is whether [e] is a value. *)
 let is_value : expr -> bool = function
   | Bool _ | Int _ -> true
-  | BinOp _ | UnaryOp _ | If _ -> false
+  | Var _ | BinOp _ | UnaryOp _ | Let _ | If _  -> false
 
 (** [step_bop bop v1 v2] implements the primitive operation [v1 bop v2].
     Requires: [v1] and [v2] are both values. *)
@@ -42,15 +44,31 @@ let step_uop uop v =
   | Neg, Int a -> Int (-a)
   | _ -> failwith "Invalid unary operator step"
 
+let rec subst e v x =
+  match e with
+  | Bool _ | Int _ -> e
+  | Var y -> if x = y then v else e
+  | UnaryOp (uop, e) -> UnaryOp (uop, subst e v x)
+  | BinOp (bop, e1, e2) -> BinOp (bop, subst e1 v x, subst e2 v x)
+  | Let (y, e1, e2) ->
+    let e1' = subst e1 v x in
+    if x = y then Let (y, e1', e2)
+    else Let (y, e1', subst e2 v x)
+  | If (c, e1, e2) ->
+    If (subst c v x, subst e1 v x, subst e2 v x)
+
 (** [step e] takes a single step of evaluation of [e]. *)
 let rec step : expr -> expr = function
   | Int _ -> failwith "Does not step"
   | Bool _ -> failwith "Does not step"
+  | Var _ -> failwith "TODO"
   | BinOp (bop, e1, e2) when is_value e1 && is_value e2 -> step_bop bop e1 e2
   | BinOp (bop, e1, e2) when is_value e1 -> BinOp (bop, e1, step e2)
   | BinOp (bop, e1, e2) -> BinOp (bop, step e1, e2)
   | UnaryOp (uop, e) when is_value e -> step_uop uop e
-  | UnaryOp (uop, e) -> UnaryOp(uop, step e)
+  | UnaryOp (uop, e) -> UnaryOp (uop, step e)
+  | Let (x, e1, e2) when is_value e1 -> subst e2 e1 x
+  | Let (x, e1, e2) -> Let (x, step e1, e2)
   | If (Bool true, e1, _) -> e1
   | If (Bool false, _, e2) -> e2
   | If (Int _, _, _) -> failwith "Guard of if must have type bool"
@@ -58,8 +76,8 @@ let rec step : expr -> expr = function
 
 (** [eval e] fully evaluates [e] to a value [v]. *)
 let rec eval (e : expr) : expr =
-  if is_value e then e else
-    e |> step |> eval
+  if is_value e then e
+  else e |> step |> eval
 
 (** [interp s] interprets [s] by lexing and parsing it.
     evaluating it, and converting the result to a string *)

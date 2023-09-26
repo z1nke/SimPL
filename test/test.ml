@@ -44,6 +44,17 @@ let tests = [
   make_i "if1" 1 "if false then 0 else 1";
   make_i "if2" 42 "if 42==42 then 42 else 0";
   make_b "if3" true "if true then true else false";
+
+  make_i "let" 42 "let x = 0 in 42";
+  make_i "let2" 43 "let x = 42 in x + 1";
+  make_i "let3" 43 "let x = 42 in if x == 42 then x + 1 else x";
+  make_i "let4" 22 "let x = 22 in if x == 42 then x + 1 else x";
+  make_i "let5" 1 "let x = 0 in (let x = 1 in x)";
+  make_i "let6" 0 "let x = 0 in (let y = 1 in x)";
+  make_i "let7" 1 "let x = 0 in (let y = 1 in x + y)";
+  make_b "let8" true "let x = 0 in true";
+  make_b "let9" false "let x = 0 in false";
+  make_i "let10" (-42) "let x = 42 in -x";
 ]
 
 let _ = run_test_tt_main ("suite" >::: tests)

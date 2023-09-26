@@ -14,6 +14,8 @@ type uop =
 type expr =
   | Bool of bool
   | Int of int
+  | Var of string
   | BinOp of bop * expr * expr
   | UnaryOp of uop * expr
+  | Let of string * expr * expr
   | If of expr * expr * expr

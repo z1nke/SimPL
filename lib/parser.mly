@@ -1,4 +1,5 @@
 %token <int> INT
+%token <string> ID
 %token TRUE
 %token FALSE
 %token EQ
@@ -13,8 +14,13 @@
 %token IF
 %token THEN
 %token ELSE
+%token LET
+%token EQUALS
+%token IN
 %token EOF
 
+%nonassoc IN
+%nonassoc ELSE
 %left EQ
 %left LT
 %left PLUS MINUS
@@ -32,6 +38,7 @@ expr:
   | i = INT { Int i }
   | TRUE { Bool (true) }
   | FALSE { Bool (false) }
+  | x = ID { Var x }
   | e1 = expr; TIMES; e2 = expr { BinOp (Mul, e1, e2) }
   | e1 = expr; DIV; e2 = expr { BinOp (Div, e1, e2) }
   | e1 = expr; MOD; e2 = expr { BinOp (Mod, e1, e2) }
@@ -41,6 +48,7 @@ expr:
   | e1 = expr; LT; e2 = expr { BinOp (Lt, e1, e2) }
   | PLUS; e = expr { UnaryOp (Pos, e) }
   | MINUS; e = expr { UnaryOp (Neg, e) }
+  | LET; x = ID; EQUALS; e1 = expr; IN; e2 = expr { Let (x, e1, e2)}
+  | IF cond = expr; THEN; e1 = expr; ELSE; e2 = expr { If (cond, e1, e2) }
   | LPAREN; e = expr; RPAREN { e }
-  | IF cond = expr; THEN; e1 = expr; ELSE; e2 = expr { If(cond, e1, e2) }
   ;
