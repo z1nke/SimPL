@@ -17,6 +17,8 @@
 %token LET
 %token EQUALS
 %token IN
+%token FUN
+%token TO
 %token EOF
 
 %nonassoc IN
@@ -51,4 +53,6 @@ expr:
   | LET; x = ID; EQUALS; e1 = expr; IN; e2 = expr { Let (x, e1, e2)}
   | IF cond = expr; THEN; e1 = expr; ELSE; e2 = expr { If (cond, e1, e2) }
   | LPAREN; e = expr; RPAREN { e }
+  | e1 = expr; e2 = expr { Apply (e1, e2) }
+  | FUN; x = ID; TO; e = expr { Lambda (x, e) }
   ;

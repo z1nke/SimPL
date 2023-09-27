@@ -55,6 +55,14 @@ let tests = [
   make_b "let8" true "let x = 0 in true";
   make_b "let9" false "let x = 0 in false";
   make_i "let10" (-42) "let x = 42 in -x";
+
+  make_i "lambda" 43 "(fun x -> x + 1) 42";
+  make_i "lambda2" 2 "let x = 1 in (fun x -> x + 1) x";
+  make_i "lambda3" 1 "(fun x -> x * x) 1";
+  make_i "lambda4" 4 "(fun x -> x * x) 2";
+  make_i "lambda5" 7 "(fun x -> (fun y -> (x + y)) 3) 4";
+  (* make_i "lambda6" 7 "fun x -> (fun y -> (x + y)) 3 4"; *)
+  (* make_i "lambda7" 7 "(fun x -> (fun y -> (x + y))) 3 4"; *)
 ]
 
 let _ = run_test_tt_main ("suite" >::: tests)

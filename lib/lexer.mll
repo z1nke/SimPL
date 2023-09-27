@@ -29,6 +29,8 @@ rule read =
   | "let" { LET }
   | "=" { EQUALS }
   | "in" { IN }
+  | "fun" { FUN }
+  | "->" { TO }
   | id { ID (Lexing.lexeme lexbuf)}
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | eof { EOF }

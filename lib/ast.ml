@@ -19,3 +19,5 @@ type expr =
   | UnaryOp of uop * expr
   | Let of string * expr * expr
   | If of expr * expr * expr
+  | Lambda of string * expr
+  | Apply of expr * expr

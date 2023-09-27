@@ -12,16 +12,18 @@ let string_of_val (e : expr) : string =
   match e with
   | Bool b -> string_of_bool b
   | Int i -> string_of_int i
+  | Lambda _ -> "lambda"
   | BinOp _ -> failwith "BinOp is not a value"
   | UnaryOp _ -> failwith "UnaryOp is not a value"
   | Let _ -> failwith "Let expression is not a value"
   | If _ -> failwith "If expression is not a value"
   | Var _ -> failwith "Unbound variable"
+  | Apply _ -> failwith "Function application is not a value"
 
 (** [is_value e] is whether [e] is a value. *)
 let is_value : expr -> bool = function
-  | Bool _ | Int _ -> true
-  | Var _ | BinOp _ | UnaryOp _ | Let _ | If _  -> false
+  | Bool _ | Int _ | Lambda _ -> true
+  | Var _ | BinOp _ | UnaryOp _ | Let _ | If _ | Apply _  -> false
 
 (** [step_bop bop v1 v2] implements the primitive operation [v1 bop v2].
     Requires: [v1] and [v2] are both values. *)
@@ -44,6 +46,7 @@ let step_uop uop v =
   | Neg, Int a -> Int (-a)
   | _ -> failwith "Invalid unary operator step"
 
+(** [subst e v x] is e with [v] substituted for [x], that is [e{v/x}]. *)
 let rec subst e v x =
   match e with
   | Bool _ | Int _ -> e
@@ -56,12 +59,18 @@ let rec subst e v x =
     else Let (y, e1', subst e2 v x)
   | If (c, e1, e2) ->
     If (subst c v x, subst e1 v x, subst e2 v x)
+  | Lambda (y, e1) ->
+    if x = y then Lambda (x, e1)
+    else Lambda (y, subst e1 v x)
+  | Apply (e1, e2) ->
+    let e1' = subst e1 v x in
+    let e2' = subst e2 v x in
+    Apply (e1', e2')
 
 (** [step e] takes a single step of evaluation of [e]. *)
 let rec step : expr -> expr = function
-  | Int _ -> failwith "Does not step"
-  | Bool _ -> failwith "Does not step"
-  | Var _ -> failwith "TODO"
+  | Int _ | Bool _ | Lambda _ -> failwith "Does not step"
+  | Var _ -> failwith "Unbound variable"
   | BinOp (bop, e1, e2) when is_value e1 && is_value e2 -> step_bop bop e1 e2
   | BinOp (bop, e1, e2) when is_value e1 -> BinOp (bop, e1, step e2)
   | BinOp (bop, e1, e2) -> BinOp (bop, step e1, e2)
@@ -73,6 +82,11 @@ let rec step : expr -> expr = function
   | If (Bool false, _, e2) -> e2
   | If (Int _, _, _) -> failwith "Guard of if must have type bool"
   | If (c, e1, e2) -> If (step c, e1, e2)
+  | Apply (Lambda (x, e), v) when is_value v -> subst e v x
+  | Apply (Lambda (x, e), e2) -> Apply (Lambda (x, e), step e2)
+  | Apply (e1, _) when is_value e1 -> failwith "The first expr must be lambda"
+  | Apply (e1, e2) when (is_value e2) = false -> Apply(e1, step e2)
+  | Apply (e1, e2) -> Apply (step e1, e2)
 
 (** [eval e] fully evaluates [e] to a value [v]. *)
 let rec eval (e : expr) : expr =

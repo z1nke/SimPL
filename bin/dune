@@ -1,4 +1,5 @@
 (executable
  (public_name SimPL)
  (name simpl)
+ (modes byte)
  (libraries interp))
