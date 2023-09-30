@@ -6,6 +6,10 @@ let parse (s : string) : expr =
   let ast = Parser.prog Lexer.read lexbuf in
   ast
 
+let unbound_var_err = "Unbound variable"
+let if_guard_err = "Guard of if must have type bool"
+let bop_err = "Operator and operand type mismatch"
+
 (** [string_of_val e] converts [e] to string.
     Requires: [e] is a value. *)
 let string_of_val (e : expr) : string =
@@ -36,7 +40,7 @@ let step_bop bop v1 v2 =
   | Mod, Int a, Int b -> Int (a mod b)
   | Eq, Int a, Int b -> Bool (a = b)
   | Lt, Int a, Int b -> Bool (a < b)
-  | _ -> failwith "Invalid binary operator step"
+  | _ -> failwith bop_err
 
 (** [step_uop uop v] implements the primitive operation [uop v].
     Requires: [v] is a value. *)
@@ -67,7 +71,15 @@ let rec subst e v x =
     let e2' = subst e2 v x in
     Apply (e1', e2')
 
-let unbound_var_err = "Unbound variable"
+(** [step v1] e1 e2 steps an if expression to either its [then] or [else]
+    branch, depending on [v1]. Requires: [v1] is a Boolean value. *)
+let step_if v1 e1 e2 =
+  if is_value v1 then
+    match v1 with
+    | Bool true -> e1
+    | Bool false -> e2
+    | _ -> failwith if_guard_err
+  else failwith "Guard of if must be a value"
 
 (** [step e] takes a single step of evaluation of [e]. *)
 let rec step : expr -> expr = function
@@ -80,9 +92,7 @@ let rec step : expr -> expr = function
   | UnaryOp (uop, e) -> UnaryOp (uop, step e)
   | Let (x, e1, e2) when is_value e1 -> subst e2 e1 x
   | Let (x, e1, e2) -> Let (x, step e1, e2)
-  | If (Bool true, e1, _) -> e1
-  | If (Bool false, _, e2) -> e2
-  | If (Int _, _, _) -> failwith "Guard of if must have type bool"
+  | If (v, e1, e2) when is_value v -> step_if v e1 e2
   | If (c, e1, e2) -> If (step c, e1, e2)
   | Apply (Lambda (x, e), v) when is_value v -> subst e v x
   | Apply (Lambda (x, e), e2) -> Apply (Lambda (x, e), step e2)

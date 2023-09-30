@@ -43,11 +43,13 @@ let tests = [
   make_b "eq2" false "1==2";
   make_b "eq3" true "-1==-1";
   make_b "eq4" false "-1==-2";
+  make_err "bop_err" bop_err "true==1";
 
   make_i "if" 0 "if true then 0 else 1";
   make_i "if1" 1 "if false then 0 else 1";
   make_i "if2" 42 "if 42==42 then 42 else 0";
   make_b "if3" true "if true then true else false";
+  make_err "if4" if_guard_err "if 1 then 42 else 0";
 
   make_i "let" 42 "let x = 0 in 42";
   make_i "let2" 43 "let x = 42 in x + 1";
@@ -65,6 +67,9 @@ let tests = [
   make_i "let14" 3 "let x = 1 in (let y = x + 1 in x + y)";
   make_err "let15" unbound_var_err "x";
   make_err "let16" unbound_var_err "let x = 1 in y";
+
+  make_i "let_if" 1
+      "let x = 2 in (let y = 2 in (let z = x == y in if z then 1 else 0))";
 
   make_i "lambda" 43 "(fun x -> x + 1) 42";
   make_i "lambda2" 2 "let x = 1 in (fun x -> x + 1) x";
