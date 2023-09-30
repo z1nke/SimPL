@@ -67,10 +67,12 @@ let rec subst e v x =
     let e2' = subst e2 v x in
     Apply (e1', e2')
 
+let unbound_var_err = "Unbound variable"
+
 (** [step e] takes a single step of evaluation of [e]. *)
 let rec step : expr -> expr = function
   | Int _ | Bool _ | Lambda _ -> failwith "Does not step"
-  | Var _ -> failwith "Unbound variable"
+  | Var _ -> failwith unbound_var_err
   | BinOp (bop, e1, e2) when is_value e1 && is_value e2 -> step_bop bop e1 e2
   | BinOp (bop, e1, e2) when is_value e1 -> BinOp (bop, e1, step e2)
   | BinOp (bop, e1, e2) -> BinOp (bop, step e1, e2)

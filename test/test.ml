@@ -9,6 +9,10 @@ let make_i n i s =
 let make_b n b s =
   n >:: (fun _ -> assert_equal (string_of_bool b) (interp s) ~printer:self)
 
+let make_err n err s =
+  let f = fun () -> (interp s) in
+  n >:: (fun _ -> assert_raises (Failure err) f)
+
 let tests = [
   make_i "int" 22 "22";
   make_i "add" 22 "11+11";
@@ -55,6 +59,12 @@ let tests = [
   make_b "let8" true "let x = 0 in true";
   make_b "let9" false "let x = 0 in false";
   make_i "let10" (-42) "let x = 42 in -x";
+  make_i "let11" 8 "let x = 2 + 2 in x + x";
+  make_i "let12" 11 "let x = 5 in ((let x = 6 in x) + x)";
+  make_i "let13" 4 "let x = 1 in (let x = x + x in x + x)";
+  make_i "let14" 3 "let x = 1 in (let y = x + 1 in x + y)";
+  make_err "let15" unbound_var_err "x";
+  make_err "let16" unbound_var_err "let x = 1 in y";
 
   make_i "lambda" 43 "(fun x -> x + 1) 42";
   make_i "lambda2" 2 "let x = 1 in (fun x -> x + 1) x";
