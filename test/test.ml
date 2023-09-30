@@ -1,17 +1,25 @@
 open OUnit2
 open Interp.Main
 
-let self (x : string) = x
-
 let make_i n i s =
-  n >:: (fun _ -> assert_equal (string_of_int i) (interp s) ~printer:self)
+  let x = string_of_int i in
+  n >:: (fun _ -> assert_equal x (interp s);
+                  assert_equal x (small_interp s))
 
 let make_b n b s =
-  n >:: (fun _ -> assert_equal (string_of_bool b) (interp s) ~printer:self)
+  let x = string_of_bool b in
+  n >:: (fun _ -> assert_equal x (interp s);
+                  assert_equal x (small_interp s))
+
+let make_s n x s =
+  n >:: (fun _ -> assert_equal x (interp s);
+                  assert_equal x (small_interp s))
 
 let make_err n err s =
-  let f = fun () -> (interp s) in
-  n >:: (fun _ -> assert_raises (Failure err) f)
+  let f1 = fun () -> (interp s) in
+  let f2 = fun () -> (small_interp s) in
+  n >:: (fun _ -> assert_raises (Failure err) f1;
+                  assert_raises (Failure err) f2)
 
 let tests = [
   make_i "int" 22 "22";
@@ -78,6 +86,9 @@ let tests = [
   make_i "lambda5" 7 "(fun x -> (fun y -> (x + y)) 3) 4";
   (* make_i "lambda6" 7 "fun x -> (fun y -> (x + y)) 3 4"; *)
   (* make_i "lambda7" 7 "(fun x -> (fun y -> (x + y))) 3 4"; *)
+  make_s "lambda_val" str_lambda_val "fun x -> x + 1";
+
+  make_err "lambda_err" apply_err "42 0";
 ]
 
 let _ = run_test_tt_main ("suite" >::: tests)

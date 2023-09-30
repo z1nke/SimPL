@@ -8,7 +8,10 @@ let parse (s : string) : expr =
 
 let unbound_var_err = "Unbound variable"
 let if_guard_err = "Guard of if must have type bool"
-let bop_err = "Operator and operand type mismatch"
+let bop_err = "Binary operator and operand type mismatch"
+let uop_err = "Unary operator and operand type mismatch"
+let str_lambda_val = "<lambda>"
+let apply_err = "The first expression of apply must be lambda"
 
 (** [string_of_val e] converts [e] to string.
     Requires: [e] is a value. *)
@@ -16,7 +19,7 @@ let string_of_val (e : expr) : string =
   match e with
   | Bool b -> string_of_bool b
   | Int i -> string_of_int i
-  | Lambda _ -> "lambda"
+  | Lambda _ -> str_lambda_val
   | BinOp _ -> failwith "BinOp is not a value"
   | UnaryOp _ -> failwith "UnaryOp is not a value"
   | Let _ -> failwith "Let expression is not a value"
@@ -48,7 +51,7 @@ let step_uop uop v =
   match uop, v with
   | Pos, _ -> v
   | Neg, Int a -> Int (-a)
-  | _ -> failwith "Invalid unary operator step"
+  | _ -> failwith uop_err
 
 (** [subst e v x] is e with [v] substituted for [x], that is [e{v/x}]. *)
 let rec subst e v x =
@@ -96,16 +99,63 @@ let rec step : expr -> expr = function
   | If (c, e1, e2) -> If (step c, e1, e2)
   | Apply (Lambda (x, e), v) when is_value v -> subst e v x
   | Apply (Lambda (x, e), e2) -> Apply (Lambda (x, e), step e2)
-  | Apply (e1, _) when is_value e1 -> failwith "The first expr must be lambda"
+  | Apply (e1, _) when is_value e1 -> failwith apply_err
   | Apply (e1, e2) when (is_value e2) = false -> Apply(e1, step e2)
   | Apply (e1, e2) -> Apply (step e1, e2)
 
-(** [eval e] fully evaluates [e] to a value [v]. *)
-let rec eval (e : expr) : expr =
+(** [small_eval e] fully evaluates [e] to a value [v]. *)
+let rec small_eval (e : expr) : expr =
   if is_value e then e
-  else e |> step |> eval
+  else e |> step |> small_eval
+
+let rec eval (e : expr) : expr = match e with
+  | Int _ | Bool _ | Lambda _ -> e
+  | Var _ -> failwith unbound_var_err
+  | BinOp (bop, e1, e2) -> eval_bop bop e1 e2
+  | UnaryOp (uop, e1) -> eval_uop uop e1
+  | Let (x, e1, e2) -> eval_let x e1 e2
+  | If (c, e1, e2) -> eval_if c e1 e2
+  | Apply (e1, e2) -> eval_apply e1 e2
+
+and eval_bop bop e1 e2 = match bop, eval e1, eval e2 with
+  | Add, Int a, Int b -> Int (a + b)
+  | Sub, Int a, Int b -> Int (a - b)
+  | Mul, Int a, Int b -> Int (a * b)
+  | Div, Int a, Int b -> Int (a / b)
+  | Mod, Int a, Int b -> Int (a mod b)
+  | Eq, Int a, Int b -> Bool (a = b)
+  | Lt, Int a, Int b -> Bool (a < b)
+  | _ -> failwith bop_err
+
+and eval_uop uop e = match uop, eval e with
+  | Pos, Int a -> Int (a)
+  | Neg, Int a -> Int (-a)
+  | _ -> failwith uop_err
+
+and eval_let x e1 e2 =
+  let v1 = eval e1 in
+  let e2' = subst e2 v1 x in
+  eval e2'
+
+and eval_if c e1 e2 = let v = eval c in
+  if is_value v then
+    match v with
+    | Bool true -> eval e1
+    | Bool false -> eval e2
+    | _ -> failwith if_guard_err
+  else failwith "Guard of if must be a value" 
+
+and eval_apply e1 e2 =
+  let v1 = eval e1 in
+  let v2 = eval e2 in
+  match v1 with
+  | Lambda (x, e) -> let e' = subst e v2 x in eval e'
+  | _ -> failwith apply_err
 
 (** [interp s] interprets [s] by lexing and parsing it.
     evaluating it, and converting the result to a string *)
 let interp (s : string) : string =
   s |> parse |> eval |> string_of_val
+
+let small_interp (s : string) : string =
+  s |> parse |> small_eval |> string_of_val
