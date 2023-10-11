@@ -30,7 +30,7 @@ rule read =
   | "=" { EQUALS }
   | "in" { IN }
   | "fun" { FUN }
-  | "->" { TO }
+  | "->" { RARROW }
   | id { ID (Lexing.lexeme lexbuf)}
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | eof { EOF }

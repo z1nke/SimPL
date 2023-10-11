@@ -1,34 +1,46 @@
+%{
+open Ast
+%}
+
 %token <int> INT
 %token <string> ID
-%token TRUE
-%token FALSE
-%token EQ
-%token LT
-%token PLUS
-%token MINUS
-%token TIMES
-%token DIV
-%token MOD
-%token LPAREN
-%token RPAREN
-%token IF
-%token THEN
-%token ELSE
-%token LET
-%token EQUALS
-%token IN
-%token FUN
-%token TO
+%token TRUE            // "true"
+%token FALSE           // "false"
+%token EQ              // "=="
+%token LT              // "<"
+%token PLUS            // "+"
+%token MINUS           // "-"
+%token TIMES           // "*"
+%token DIV             // "/"
+%token MOD             // "%"
+%token LPAREN          // "("
+%token RPAREN          // ")"
+%token IF              // "if"
+%token THEN            // "then"
+%token ELSE            // "else"
+%token LET             // "let"
+%token EQUALS          // "="
+%token IN              // "in"
+%token FUN             // "fun"
+%token RARROW          // "->"
 %token EOF
 
 %nonassoc IN
 %nonassoc ELSE
+%nonassoc RARROW
 %left EQ
 %left LT
 %left PLUS MINUS
 %left TIMES DIV MOD
+%nonassoc POS NEG
 
 %start <Ast.expr> prog
+%type <Ast.uop> positive
+%type <Ast.uop> negative
+%type <Ast.expr> sexpr
+%type <Ast.bop> binop
+%type <Ast.expr> fun_def
+%type <Ast.expr> expr;
 
 %%
 
@@ -36,23 +48,43 @@ prog:
   | e = expr; EOF { e }
   ;
 
-expr:
+positive:
+  | PLUS { Pos }
+  ;
+
+negative:
+  | MINUS { Neg }
+  ;
+
+sexpr:
   | i = INT { Int i }
+  | x = ID { Var x }
   | TRUE { Bool (true) }
   | FALSE { Bool (false) }
-  | x = ID { Var x }
-  | e1 = expr; TIMES; e2 = expr { BinOp (Mul, e1, e2) }
-  | e1 = expr; DIV; e2 = expr { BinOp (Div, e1, e2) }
-  | e1 = expr; MOD; e2 = expr { BinOp (Mod, e1, e2) }
-  | e1 = expr; PLUS; e2 = expr { BinOp (Add, e1, e2) }
-  | e1 = expr; MINUS; e2 = expr { BinOp (Sub, e1, e2) }
-  | e1 = expr; EQ; e2 = expr { BinOp (Eq, e1, e2) }
-  | e1 = expr; LT; e2 = expr { BinOp (Lt, e1, e2) }
-  | PLUS; e = expr { UnaryOp (Pos, e) }
-  | MINUS; e = expr { UnaryOp (Neg, e) }
+  | LPAREN; e = expr; RPAREN { e }
+  ;
+
+%inline binop:
+  | PLUS  { Add }
+  | MINUS { Sub }
+  | TIMES { Mul }
+  | DIV   { Div }
+  | MOD   { Mod }
+  | EQ    { Eq  }
+  | LT    { Lt  }
+  ;
+
+fun_def:
+  | RARROW; e = expr { e }
+  ;
+
+expr:
+  | e = sexpr { e }
+  | e1 = expr; op = binop; e2 = expr { BinOp (op, e1, e2) }
+  | positive; e = expr %prec POS { UnaryOp (Pos, e) }
+  | negative; e = expr %prec NEG { UnaryOp (Neg, e) }
   | LET; x = ID; EQUALS; e1 = expr; IN; e2 = expr { Let (x, e1, e2)}
   | IF cond = expr; THEN; e1 = expr; ELSE; e2 = expr { If (cond, e1, e2) }
-  | LPAREN; e = expr; RPAREN { e }
-  | e1 = expr; e2 = expr { Apply (e1, e2) }
-  | FUN; x = ID; TO; e = expr { Lambda (x, e) }
+  | f = sexpr; args = sexpr { Apply (f, args) }
+  | FUN; x = ID; e = fun_def { Lambda (x, e) }
   ;

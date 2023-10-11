@@ -33,6 +33,7 @@ let tests = [
   make_i "neg" 20 "-2+22";
   make_i "neg" (-20) "-2*10";
   make_i "neg2" (-20) "10*-2";
+  make_i "neg3" (-40) "10*-2*2";
   make_i "sub" (-40) "-2*10-10*2";
   make_i "sub2" (-40) "-2+10*-2-18";
   make_i "div" 20 "40/2";
@@ -84,8 +85,10 @@ let tests = [
   make_i "lambda3" 1 "(fun x -> x * x) 1";
   make_i "lambda4" 4 "(fun x -> x * x) 2";
   make_i "lambda5" 7 "(fun x -> (fun y -> (x + y)) 3) 4";
-  (* make_i "lambda6" 7 "fun x -> (fun y -> (x + y)) 3 4"; *)
-  (* make_i "lambda7" 7 "(fun x -> (fun y -> (x + y))) 3 4"; *)
+  make_i "lambda6" 3 "let x = (fun x -> x + 1) in x 2";
+  (* make_i "lambdaX1" 7 "fun x -> (fun y -> (x + y)) 3 4"; *)
+  (* make_i "lambdaX2" 7 "(fun x -> (fun y -> (x + y))) 3 4"; *)
+  
   make_s "lambda_val" str_lambda_val "fun x -> x + 1";
 
   make_err "lambda_err" apply_err "42 0";
