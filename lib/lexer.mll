@@ -31,6 +31,9 @@ rule read =
   | "in" { IN }
   | "fun" { FUN }
   | "->" { RARROW }
+  | "," { COMMA }
+  | "car" { CAR }
+  | "cdr" { CDR }
   | id { ID (Lexing.lexeme lexbuf)}
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | eof { EOF }

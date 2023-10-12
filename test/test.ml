@@ -92,6 +92,29 @@ let tests = [
   make_s "lambda_val" str_lambda_val "fun x -> x + 1";
 
   make_err "lambda_err" apply_err "42 0";
+
+  make_s "pair" "(0, 42)" "(0,42)";
+  make_s "pair1" "(2, 42)" "(1+1, 42)";
+  make_s "pair2" "(true, 42)" "(true,42)";
+  make_s "pair3" (Format.sprintf "(%s, 42)" str_lambda_val)
+         "(fun x -> x + 1, 42)";
+  make_s "pair4" "(0, 42)" "let x = (0, 42) in x";
+  make_s "pair5" "(0, (1, 2))" "(0, (1, 2))";
+  make_s "pair6" "(0, (1, 2))" "let x = (1, 2) in (0, x)";
+
+  make_i "car1" 0 "car (0, 42)";
+  make_i "car2" 2 "car (1+1, 42)";
+  make_b "car3" true "car (true, 42)";
+  make_b "car4" true "car (1==1, 42)";
+  make_b "car5" true "car (1<2, 42)";
+  make_b "car6" false "car (1==2, 42)";
+  make_i "car7" 42 "(car (fun x -> x + 1, 42)) 41";
+
+  make_i "cdr1" 42 "cdr (0, 42)";
+  make_i "cdr2" 2 "cdr (42, 1+1)";
+  make_s "cdr3" "(2, 3)" "cdr (1,(2,3))";
+  make_i "cdr4" 3 "cdr cdr (1, (2, 3))";
+  make_i "cdr5" 2 "car cdr (1, (2, 3))";
 ]
 
 let _ = run_test_tt_main ("suite" >::: tests)

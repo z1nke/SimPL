@@ -23,6 +23,9 @@ open Ast
 %token IN              // "in"
 %token FUN             // "fun"
 %token RARROW          // "->"
+%token COMMA           // ","
+%token CAR             // "car"
+%token CDR             // "cdr"
 %token EOF
 
 %nonassoc IN
@@ -32,7 +35,7 @@ open Ast
 %left LT
 %left PLUS MINUS
 %left TIMES DIV MOD
-%nonassoc POS NEG
+%nonassoc POS NEG CAR CDR
 
 %start <Ast.expr> prog
 %type <Ast.uop> positive
@@ -40,7 +43,7 @@ open Ast
 %type <Ast.expr> sexpr
 %type <Ast.bop> binop
 %type <Ast.expr> fun_def
-%type <Ast.expr> expr;
+%type <Ast.expr> expr
 
 %%
 
@@ -62,6 +65,7 @@ sexpr:
   | TRUE { Bool (true) }
   | FALSE { Bool (false) }
   | LPAREN; e = expr; RPAREN { e }
+  | LPAREN; e1 = expr; COMMA; e2 = expr; RPAREN { Pair (e1, e2) }
   ;
 
 %inline binop:
@@ -83,6 +87,8 @@ expr:
   | e1 = expr; op = binop; e2 = expr { BinOp (op, e1, e2) }
   | positive; e = expr %prec POS { UnaryOp (Pos, e) }
   | negative; e = expr %prec NEG { UnaryOp (Neg, e) }
+  | CAR; e = expr { Car (e) }
+  | CDR; e = expr { Cdr (e) }
   | LET; x = ID; EQUALS; e1 = expr; IN; e2 = expr { Let (x, e1, e2)}
   | IF cond = expr; THEN; e1 = expr; ELSE; e2 = expr { If (cond, e1, e2) }
   | f = sexpr; args = sexpr { Apply (f, args) }

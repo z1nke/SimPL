@@ -21,3 +21,6 @@ type expr =
   | If of expr * expr * expr
   | Lambda of string * expr
   | Apply of expr * expr
+  | Pair of expr * expr
+  | Car of expr
+  | Cdr of expr
