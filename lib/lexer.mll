@@ -2,7 +2,7 @@
 open Parser
 }
 
-let whitespace = [' ' '\t']+
+let whitespace = [' ' '\t' '\r' '\n']+
 let digit = ['0'-'9']
 let int = digit+
 let letter = ['a'-'z' 'A'-'Z']
@@ -34,6 +34,11 @@ rule read =
   | "," { COMMA }
   | "car" { CAR }
   | "cdr" { CDR }
+  | "Left" { LEFT }
+  | "Right" { RIGHT }
+  | "match" { MATCH }
+  | "with" { WITH }
+  | "|" { BAR }
   | id { ID (Lexing.lexeme lexbuf)}
   | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
   | eof { EOF }

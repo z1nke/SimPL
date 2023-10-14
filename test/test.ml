@@ -115,6 +115,22 @@ let tests = [
   make_s "cdr3" "(2, 3)" "cdr (1,(2,3))";
   make_i "cdr4" 3 "cdr cdr (1, (2, 3))";
   make_i "cdr5" 2 "car cdr (1, (2, 3))";
+
+  make_s "left1" "<left 42>" "Left 42";
+  make_s "left2" "<left 2>" "Left (1+1)";
+  make_s "left3" "<left 2>" "Left 1+1";
+  make_s "right1" "<right 42>" "Right 42";
+  make_s "right2" "<right 2>" "Right(1+1)";
+  make_s "right3" "<right 2>" "Right1+1";
+
+  make_i "match1" 42 "match Left 42 with Left x -> x | Right x -> x + 1";
+  make_i "match2" 43 "match Right 42 with Left x -> x | Right x -> x + 1";
+  make_i "match3" 42 "match Left ((fun x -> x + 1) 41)
+                      with Left x -> x | Right x -> x + 1";
+  make_i "match3" 42 "let x = Left ((fun x -> x + 1) 41) in
+                      match x with Left x -> x | Right x -> x + 1";
+  make_err "match_err" not_left_or_right_err
+    "let x = 42 in match x with Left x -> x | Right x -> x + 1";
 ]
 
 let _ = run_test_tt_main ("suite" >::: tests)

@@ -24,3 +24,6 @@ type expr =
   | Pair of expr * expr
   | Car of expr
   | Cdr of expr
+  | Left of expr
+  | Right of expr
+  | Match of expr * string * expr * string * expr

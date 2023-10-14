@@ -26,11 +26,17 @@ open Ast
 %token COMMA           // ","
 %token CAR             // "car"
 %token CDR             // "cdr"
+%token LEFT            // "Left"
+%token RIGHT           // "Right"
+%token MATCH           // "match"
+%token WITH            // "with"
+%token BAR             // "|"
 %token EOF
 
 %nonassoc IN
 %nonassoc ELSE
 %nonassoc RARROW
+%nonassoc LEFT RIGHT
 %left EQ
 %left LT
 %left PLUS MINUS
@@ -93,4 +99,8 @@ expr:
   | IF cond = expr; THEN; e1 = expr; ELSE; e2 = expr { If (cond, e1, e2) }
   | f = sexpr; args = sexpr { Apply (f, args) }
   | FUN; x = ID; e = fun_def { Lambda (x, e) }
+  | LEFT; e = expr { Left (e) }
+  | RIGHT; e = expr { Right (e) }
+  | MATCH; e = expr; WITH; LEFT; x1 = ID; RARROW; e1 = expr; BAR;
+    RIGHT; x2 = ID; RARROW; e2 = expr { Match (e, x1, e1, x2, e2) }
   ;

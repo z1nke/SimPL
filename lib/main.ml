@@ -14,6 +14,7 @@ let str_lambda_val = "<lambda>"
 let apply_err = "The first expression of apply must be lambda"
 let does_not_step_err = "Does not step"
 let not_pair_err = "Operand is not a pair type"
+let not_left_or_right_err = "Operand is not a Left or Right expression"
 
 (** [string_of_val e] converts [e] to string.
     Requires: [e] is a value. *)
@@ -28,15 +29,21 @@ let rec string_of_val (e : expr) : string =
   | If _ -> failwith "If expression is not a value"
   | Var _ -> failwith "Unbound variable"
   | Apply _ -> failwith "Function application is not a value"
-  | Pair (e1, e2) -> Format.sprintf "(%s, %s)" (string_of_val e1) (string_of_val e2)
+  | Pair (e1, e2) -> Format.sprintf "(%s, %s)" 
+    (string_of_val e1) (string_of_val e2)
   | Car _ | Cdr _ -> failwith "Car/Cdr expression is not a value"
+  | Left e -> Format.sprintf "<left %s>" (string_of_val e)
+  | Right e -> Format.sprintf "<right %s>" (string_of_val e)
+  | Match _ -> failwith "Match expression is not a value"
 
 (** [is_value e] is whether [e] is a value. *)
 let rec is_value : expr -> bool = function
   | Bool _ | Int _ | Lambda _ -> true
   | Var _ | BinOp _ | UnaryOp _ | Let _ | If _ | Apply _  -> false
+  | Car _ | Cdr _ | Match _ -> false
   | Pair (e1, e2) -> is_value e1 && is_value e2
-  | Car _ | Cdr _ -> false
+  | Left e -> is_value e
+  | Right e -> is_value e
 
 (** [step_bop bop v1 v2] implements the primitive operation [v1 bop v2].
     Requires: [v1] and [v2] are both values. *)
@@ -85,6 +92,13 @@ let rec subst e v x =
     Pair (e1', e2')
   | Car e -> Car (subst e v x)
   | Cdr e -> Cdr (subst e v x)
+  | Left e -> Left (subst e v x)
+  | Right e -> Right (subst e v x)
+  | Match (e, x1, e1, x2, e2) ->
+    let e' = subst e v x in
+    let e1' = if x = x1 then e1 else (subst e1 v x) in
+    let e2' = if x = x2 then e2 else (subst e2 v x) in
+    Match (e', x1, e1', x2, e2')
 
 (** [step v1] e1 e2 steps an if expression to either its [then] or [else]
     branch, depending on [v1]. Requires: [v1] is a Boolean value. *)
@@ -119,17 +133,28 @@ let rec step : expr -> expr = function
   | Pair (e1, e2) -> Pair (step e1, e2)
   | Car e -> car_step e
   | Cdr e -> cdr_step e
+  | Left e -> Left (step e)
+  | Right e -> Right (step e)
+  | Match (e, x1, e1, x2, e2) -> match_step e x1 e1 x2 e2
 
 and car_step = function
-| Pair (e, _) -> e
-| e when is_value e -> failwith not_pair_err
-| e -> Car (step e)
+  | Pair (e, _) -> e
+  | e when is_value e -> failwith not_pair_err
+  | e -> Car (step e)
 
 and cdr_step = function
-| Pair (_, e) -> e
-| e when is_value e -> failwith not_pair_err
-| e -> Cdr (step e)
+  | Pair (_, e) -> e
+  | e when is_value e -> failwith not_pair_err
+  | e -> Cdr (step e)
 
+and match_step e x1 e1 x2 e2 =
+  if not (is_value e) then Match (step e, x1, e1, x2, e2)
+  else match e with
+  | Left v when is_value v -> subst e1 v x1
+  | Left _ -> Match (e, x1, step e1, x2, e2)
+  | Right v when is_value v -> subst e2 v x2
+  | Right _ -> Match (e, x1, e1, x2, step e2)
+  | _ -> failwith not_left_or_right_err
 
 (** [small_eval e] fully evaluates [e] to a value [v]. *)
 let rec small_eval (e : expr) : expr =
@@ -147,6 +172,9 @@ let rec eval (e : expr) : expr = match e with
   | Pair (e1, e2) -> eval_pair e1 e2
   | Car e -> eval_car e
   | Cdr e -> eval_cdr e
+  | Left e -> eval_left e
+  | Right e -> eval_right e
+  | Match (e, x1, e1, x2, e2) -> eval_match e x1 e1 x2 e2
 
 and eval_bop bop e1 e2 = match bop, eval e1, eval e2 with
   | Add, Int a, Int b -> Int (a + b)
@@ -197,6 +225,16 @@ and eval_cdr e =
   match eval e with
   | Pair (_, snd) -> snd
   | _ -> failwith not_pair_err
+
+and eval_match e x1 e1 x2 e2 =
+  match eval e with
+  | Left v -> subst e1 v x1 |> eval
+  | Right v -> subst e2 v x2 |> eval
+  | _ -> failwith not_left_or_right_err
+
+and eval_left e = if is_value e then Left e else Left (eval e)
+
+and eval_right e = if is_value e then Right e else Right (eval e)
 
 (** [interp s] interprets [s] by lexing and parsing it.
     evaluating it, and converting the result to a string *)
