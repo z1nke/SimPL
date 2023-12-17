@@ -36,6 +36,64 @@ let rec string_of_val (e : expr) : string =
   | Right e -> Format.sprintf "<right %s>" (string_of_val e)
   | Match _ -> failwith "Match expression is not a value"
 
+let string_of_bop = function
+  | Add -> "+"
+  | Sub -> "-"
+  | Mul -> "*"
+  | Div -> "/"
+  | Mod -> "%"
+  | Eq -> "=="
+  | Lt -> "<"
+
+let string_of_uop = function
+  | Pos -> "+"
+  | Neg -> "-"
+
+let rec string_of_expr (e : expr) : string =
+  match e with
+  | Bool b -> string_of_bool b
+  | Int i -> string_of_int i
+  | Var x -> Format.sprintf "(var %s)" x
+  | BinOp (bop, e1, e2) ->
+    let s1 = string_of_expr e1 in
+    let s2 = string_of_expr e2 in
+    Format.sprintf "(%s%s%s)" s1 (string_of_bop bop) s2
+  | UnaryOp (uop, e1) ->
+    let s1 = string_of_expr e1 in
+    Format.sprintf "(%s%s)" (string_of_uop uop) s1
+  | Let (x, e1, e2) ->
+    let s1 = string_of_expr e1 in
+    let s2 = string_of_expr e2 in
+    Format.sprintf "(let %s = %s in %s)" x s1 s2
+  | If (c, e1, e2) ->
+    let sc = string_of_expr c in
+    let s1 = string_of_expr e1 in
+    let s2 = string_of_expr e2 in
+    Format.sprintf "(if %s then %s else %s)" sc s1 s2
+  | Lambda (x, e1) ->
+    let s1 = string_of_expr e1 in
+    Format.sprintf "(λ%s. %s)" x s1
+  | Apply (e1, e2) ->
+    let s1 = string_of_expr e1 in
+    let s2 = string_of_expr e2 in
+    Format.sprintf "(%s %s)" s1 s2
+  | Pair (e1, e2) -> Format.sprintf "(%s, %s)"
+    (string_of_expr e1) (string_of_expr e2)
+  | Car e1 ->
+    let s1 = string_of_expr e1 in
+    Format.sprintf "(car %s)" s1
+  | Cdr e1 ->
+    let s1 = string_of_expr e1 in
+    Format.sprintf "(cdr %s)" s1
+  | Left e -> Format.sprintf "<left %s>" (string_of_expr e)
+  | Right e -> Format.sprintf "<right %s>" (string_of_expr e)
+  | Match (m, x1, e1, x2, e2) ->
+    let sm = string_of_expr m in
+    let s1 = string_of_expr e1 in
+    let s2 = string_of_expr e2 in
+    Format.sprintf
+        "(match %s with Left %s -> %s | Right %s -> %s)" sm x1 s1 x2 s2
+
 (** [is_value e] is whether [e] is a value. *)
 let rec is_value : expr -> bool = function
   | Bool _ | Int _ | Lambda _ -> true
@@ -66,6 +124,59 @@ let step_uop uop v =
   | Neg, Int a -> Int (-a)
   | _ -> failwith uop_err
 
+let symprefix = "$x"
+
+let gensym =
+  let counter = ref 0 in
+  fun () -> incr counter; symprefix ^ string_of_int !counter
+
+(** [alpha_covert e o n] will replace old variable name [o] to
+    new variable name [n] in expression [e] *)
+let rec alpha_covert e o n =
+  match e with
+  | Bool _ | Int _ -> e
+  | Var x -> if x = o then Var n else e
+  | UnaryOp (uop, e1) -> UnaryOp (uop, alpha_covert e1 o n)
+  | BinOp (bop, e1, e2) -> BinOp (bop, alpha_covert e1 o n, alpha_covert e2 o n)
+  | Lambda (x, e1) ->
+    if String.starts_with x ~prefix:symprefix
+      then
+        Lambda (x, alpha_covert e1 o n)
+      else
+        let x' = gensym () in
+        let new_lambda = (Lambda (x', alpha_covert e1 x x')) in
+        alpha_covert new_lambda o n
+  | Let (x, e1, e2) ->
+    if String.starts_with x ~prefix:symprefix
+      then
+        Let (x, alpha_covert e1 o n, alpha_covert e2 o n)
+      else
+        let x' = gensym () in
+        let new_let = (Let (x', e1, alpha_covert e2 x x')) in
+        alpha_covert new_let o n
+  | If (c, e1, e2) ->
+    If (alpha_covert c o n, alpha_covert e1 o n, alpha_covert e2 o n)
+  | Apply (e1, e2) -> Apply (alpha_covert e1 o n, alpha_covert e2 o n)
+  | Pair (e1, e2) -> Pair (alpha_covert e1 o n, alpha_covert e2 o n)
+  | Car (e1) -> Car (alpha_covert e1 o n)
+  | Cdr (e1) -> Cdr (alpha_covert e1 o n)
+  | Left (e1) -> Left (alpha_covert e1 o n)
+  | Right (e1) -> Right (alpha_covert e1 o n)
+  | Match (m, x1, e1, x2, e2) ->
+    if String.starts_with x1 ~prefix:symprefix
+      then
+        let m' = alpha_covert m o n in
+        let e1' = alpha_covert e1 o n in
+        let e2' = alpha_covert e2 o n in
+        Match (m', x1, e1', x2, e2')
+      else
+        let freshx = gensym () in
+        let freshy = gensym () in
+        let e1' = alpha_covert e1 x1 freshx in
+        let e2' = alpha_covert e2 x2 freshy in
+        let new_match = Match(m, freshx, e1', freshy, e2') in
+        alpha_covert new_match o n
+
 (** [subst e v x] is e with [v] substituted for [x], that is [e{v/x}]. *)
 let rec subst e v x =
   match e with
@@ -76,12 +187,18 @@ let rec subst e v x =
   | Let (y, e1, e2) ->
     let e1' = subst e1 v x in
     if x = y then Let (y, e1', e2)
-    else Let (y, e1', subst e2 v x)
+    else
+      let y' = gensym () in
+      let e2' = alpha_covert e2 y y' in
+      Let (y', e1', subst e2' v x)
   | If (c, e1, e2) ->
     If (subst c v x, subst e1 v x, subst e2 v x)
   | Lambda (y, e1) ->
     if x = y then Lambda (x, e1)
-    else Lambda (y, subst e1 v x)
+    else
+      let y' = gensym () in
+      let e1' = alpha_covert e1 y y' in
+      Lambda (y', subst e1' v x)
   | Apply (e1, e2) ->
     let e1' = subst e1 v x in
     let e2' = subst e2 v x in
@@ -95,10 +212,14 @@ let rec subst e v x =
   | Left e -> Left (subst e v x)
   | Right e -> Right (subst e v x)
   | Match (e, x1, e1, x2, e2) ->
+    let x1' = gensym () in
+    let x2' = gensym () in
+    let e1' = alpha_covert e1 x1 x1' in
+    let e2' = alpha_covert e2 x2 x2' in
     let e' = subst e v x in
-    let e1' = if x = x1 then e1 else (subst e1 v x) in
-    let e2' = if x = x2 then e2 else (subst e2 v x) in
-    Match (e', x1, e1', x2, e2')
+    let e1'' = if x = x1 then e1' else (subst e1' v x) in
+    let e2'' = if x = x2 then e2' else (subst e2' v x) in
+    Match (e', x1', e1'', x2', e2'')
 
 (** [step v1] e1 e2 steps an if expression to either its [then] or [else]
     branch, depending on [v1]. Requires: [v1] is a Boolean value. *)

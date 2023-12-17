@@ -11,6 +11,9 @@ let make_b n b s =
   n >:: (fun _ -> assert_equal x (interp s);
                   assert_equal x (small_interp s))
 
+let make_eq n x1 x2 =
+  n >:: (fun _ -> assert_equal x1 x2)
+
 let make_s n x s =
   n >:: (fun _ -> assert_equal x (interp s);
                   assert_equal x (small_interp s))
@@ -129,8 +132,15 @@ let tests = [
                       with Left x -> x | Right x -> x + 1";
   make_i "match3" 42 "let x = Left ((fun x -> x + 1) 41) in
                       match x with Left x -> x | Right x -> x + 1";
+  make_i "match4" 0 "match Left 0 with Left x -> x | Right x -> x + 1";
   make_err "match_err" not_left_or_right_err
     "let x = 42 in match x with Left x -> x | Right x -> x + 1";
+
+  make_i "subst1" 0 "let x = 0 in let z = 1 in ((fun z -> x) 0)";
+  make_i "subst2" 2 "((fun x -> (fun x -> x + 1)) 0) 1";
+  make_i "subst3" 0 "let f = (fun x -> (fun y -> x)) 0 in let x = 42 in f 1";
+  make_eq "subst4" "(λ$x1. ((var x) (var $x1)))"
+      (string_of_expr (subst (parse "fun x -> y x") (Var "x") "y"));
 ]
 
 let _ = run_test_tt_main ("suite" >::: tests)
