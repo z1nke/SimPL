@@ -1,15 +1,6 @@
-type bop =
-  | Add
-  | Sub
-  | Mul
-  | Div
-  | Mod
-  | Eq
-  | Lt
+type bop = Add | Sub | Mul | Div | Mod | Eq | Lt
 
-type uop =
-  | Pos
-  | Neg
+type uop = Pos | Neg
 
 type expr =
   | Bool of bool

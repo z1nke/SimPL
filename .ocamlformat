@@ -1,0 +1,7 @@
+profile = ocamlformat
+break-cases = fit
+break-separators = after
+cases-exp-indent = 2
+margin = 81
+wrap-comments = true
+line-endings = lf
