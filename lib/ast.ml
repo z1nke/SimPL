@@ -11,6 +11,7 @@ type expr =
   | Let of string * expr * expr
   | If of expr * expr * expr
   | Lambda of string * expr
+  | Closure of string * expr * environment
   | Apply of expr * expr
   | Pair of expr * expr
   | Car of expr
@@ -18,3 +19,5 @@ type expr =
   | Left of expr
   | Right of expr
   | Match of expr * string * expr * string * expr
+
+and environment = (string, expr) Hashtbl.t

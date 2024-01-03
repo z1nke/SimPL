@@ -6,14 +6,16 @@ let make_i n i s =
   n
   >:: fun _ ->
   assert_equal x (interp s) ;
-  assert_equal x (small_interp s)
+  assert_equal x (small_interp s) ;
+  assert_equal x (env_interp s)
 
 let make_b n b s =
   let x = string_of_bool b in
   n
   >:: fun _ ->
   assert_equal x (interp s) ;
-  assert_equal x (small_interp s)
+  assert_equal x (small_interp s) ;
+  assert_equal x (env_interp s)
 
 let make_eq n x1 x2 = n >:: fun _ -> assert_equal x1 x2
 
@@ -21,15 +23,18 @@ let make_s n x s =
   n
   >:: fun _ ->
   assert_equal x (interp s) ;
-  assert_equal x (small_interp s)
+  assert_equal x (small_interp s) ;
+  assert_equal x (env_interp s)
 
 let make_err n err s =
   let f1 () = interp s in
   let f2 () = small_interp s in
+  let f3 () = env_interp s in
   n
   >:: fun _ ->
   assert_raises (Failure err) f1 ;
-  assert_raises (Failure err) f2
+  assert_raises (Failure err) f2 ;
+  assert_raises (Failure err) f3
 
 let tests =
   [ make_i "int" 22 "22";

@@ -24,13 +24,15 @@ let not_pair_err = "Operand is not a pair type"
 
 let not_left_or_right_err = "Operand is not a Left or Right expression"
 
+let not_support_closure = "Not support closure"
+
 (** [string_of_val e] converts [e] to string.
     Requires: [e] is a value. *)
 let rec string_of_val (e : expr) : string =
   match e with
   | Bool b -> string_of_bool b
   | Int i -> string_of_int i
-  | Lambda _ -> str_lambda_val
+  | Lambda _ | Closure _ -> str_lambda_val
   | BinOp _ -> failwith "BinOp is not a value"
   | UnaryOp _ -> failwith "UnaryOp is not a value"
   | Let _ -> failwith "Let expression is not a value"
@@ -79,6 +81,9 @@ let rec string_of_expr (e : expr) : string =
   | Lambda (x, e1) ->
     let s1 = string_of_expr e1 in
     Format.sprintf "(λ%s. %s)" x s1
+  | Closure (x, e1, _) ->
+    let s1 = string_of_expr e1 in
+    Format.sprintf "(|%s.%s|)" x s1
   | Apply (e1, e2) ->
     let s1 = string_of_expr e1 in
     let s2 = string_of_expr e2 in
@@ -102,7 +107,7 @@ let rec string_of_expr (e : expr) : string =
 
 (** [is_value e] is whether [e] is a value. *)
 let rec is_value : expr -> bool = function
-  | Bool _ | Int _ | Lambda _ -> true
+  | Bool _ | Int _ | Lambda _ | Closure _ -> true
   | Var _ | BinOp _ | UnaryOp _ | Let _ | If _ | Apply _ -> false
   | Car _ | Cdr _ | Match _ -> false
   | Pair (e1, e2) -> is_value e1 && is_value e2
@@ -152,6 +157,7 @@ let rec alpha_covert e o n =
       let x' = gensym () in
       let new_lambda = Lambda (x', alpha_covert e1 x x') in
       alpha_covert new_lambda o n
+  | Closure _ -> failwith not_support_closure
   | Let (x, e1, e2) ->
     if String.starts_with x ~prefix:symprefix then
       Let (x, alpha_covert e1 o n, alpha_covert e2 o n)
@@ -202,6 +208,7 @@ let rec subst e v x =
       let y' = gensym () in
       let e1' = alpha_covert e1 y y' in
       Lambda (y', subst e1' v x)
+  | Closure _ -> failwith not_support_closure
   | Apply (e1, e2) ->
     let e1' = subst e1 v x in
     let e2' = subst e2 v x in
@@ -236,7 +243,7 @@ let step_if v1 e1 e2 =
 
 (** [step e] takes a single step of evaluation of [e]. *)
 let rec step : expr -> expr = function
-  | Int _ | Bool _ | Lambda _ -> failwith does_not_step_err
+  | Int _ | Bool _ | Lambda _ | Closure _ -> failwith does_not_step_err
   | Var _ -> failwith unbound_var_err
   | BinOp (bop, e1, e2) when is_value e1 && is_value e2 -> step_bop bop e1 e2
   | BinOp (bop, e1, e2) when is_value e1 -> BinOp (bop, e1, step e2)
@@ -288,6 +295,7 @@ let rec small_eval (e : expr) : expr =
 let rec eval (e : expr) : expr =
   match e with
   | Int _ | Bool _ | Lambda _ -> e
+  | Closure _ -> failwith not_support_closure
   | Var _ -> failwith unbound_var_err
   | BinOp (bop, e1, e2) -> eval_bop bop e1 e2
   | UnaryOp (uop, e1) -> eval_uop uop e1
@@ -362,9 +370,75 @@ and eval_left e = if is_value e then Left e else Left (eval e)
 
 and eval_right e = if is_value e then Right e else Right (eval e)
 
+let lookup_env (env : environment) x =
+  try Hashtbl.find env x with Not_found -> failwith unbound_var_err
+
+let extend_env (env : environment) x v = Hashtbl.add env x v
+
+let rec env_eval env e : expr =
+  match e with
+  | Int _ | Bool _ -> e
+  | Var x -> lookup_env env x
+  | BinOp (bop, e1, e2) ->
+    let v1 = env_eval env e1 in
+    let v2 = env_eval env e2 in
+    step_bop bop v1 v2
+  | UnaryOp (uop, e) ->
+    let v = env_eval env e in
+    step_uop uop v
+  | Let (x, e1, e2) ->
+    let v1 = env_eval env e1 in
+    let new_env = Hashtbl.copy env in
+    extend_env new_env x v1 ; env_eval new_env e2
+  | If (c, e1, e2) -> (
+    let cv = env_eval env c in
+    match cv with
+    | Bool true -> env_eval env e1
+    | Bool false -> env_eval env e2
+    | _ -> failwith if_guard_err )
+  | Lambda (x, e) -> Closure (x, e, Hashtbl.copy env)
+  | Apply (e1, e2) -> (
+    match env_eval env e1 with
+    | Closure (x, e, closure_env) ->
+      let arg = env_eval env e2 in
+      extend_env closure_env x arg ;
+      env_eval closure_env e
+    | _ -> failwith apply_err )
+  | Pair (e1, e2) ->
+    let v1 = env_eval env e1 in
+    let v2 = env_eval env e2 in
+    Pair (v1, v2)
+  | Car e -> (
+    let p = env_eval env e in
+    match p with Pair (e1, _) -> e1 | _ -> failwith not_pair_err )
+  | Cdr e -> (
+    let p = env_eval env e in
+    match p with Pair (_, e2) -> e2 | _ -> failwith not_pair_err )
+  | Left e ->
+    let v = env_eval env e in
+    Left v
+  | Right e ->
+    let v = env_eval env e in
+    Right v
+  | Match (m, x1, e1, x2, e2) -> (
+    let mv = env_eval env m in
+    match mv with
+    | Left v ->
+      let new_env = Hashtbl.copy env in
+      extend_env new_env x1 v ; env_eval new_env e1
+    | Right v ->
+      let new_env = Hashtbl.copy env in
+      extend_env new_env x2 v ; env_eval new_env e2
+    | _ -> failwith not_left_or_right_err )
+  | _ -> e
+
 (** [interp s] interprets [s] by lexing and parsing it.
     evaluating it, and converting the result to a string *)
 let interp (s : string) : string = s |> parse |> eval |> string_of_val
 
 let small_interp (s : string) : string =
   s |> parse |> small_eval |> string_of_val
+
+let env_interp (s : string) : string =
+  let env = Hashtbl.create 10 in
+  s |> parse |> env_eval env |> string_of_val
