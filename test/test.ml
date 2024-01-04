@@ -142,6 +142,7 @@ let tests =
     make_i "subst2" 2 "((fun x -> (fun x -> x + 1)) 0) 1";
     make_i "subst3" 0 "let f = (fun x -> (fun y -> x)) 0 in let x = 42 in f 1";
     make_eq "subst4" "(λ$x1. ((var x) (var $x1)))"
-      (string_of_expr (subst (parse "fun x -> y x") (Var "x") "y")) ]
+      (string_of_expr (subst (parse "fun x -> y x") (Var "x") "y"));
+    make_i "env1" 1 "let x = 1 in let f = fun y -> x in let x = 2 in f 0" ]
 
 let _ = run_test_tt_main ("suite" >::: tests)
